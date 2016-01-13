@@ -62,22 +62,10 @@
 		<th scope="row"><?php _e("Custom Stylesheet File");?></th>
 		<td><input type="text" name="custom_style" value="<?php echo $customstyle;?>" style="width: 50%;" /></td>
 		</tr>
-		<tr>
-			<th scope="row"><?php _e("Template");?></th>
+			<tr>
+			<th scope="row"><?php _e("Enable Bootstrap Tab");?></th>
 			<td>
-			<select name="template">
-			<?php 
-			foreach($templates as $template):
-
-				if($template == $selectedTemplate):
-					$selected = ' selected="selected"';
-				endif;
-				?>
-				<option value="<?php echo strtolower($template);?>"<?php echo $selected;?>><?php echo $template;?></option>
-				<?php
-			endforeach;
-			?>
-				</select>
+			<input type="checkbox" name="boottabs" value="on"<?php echo $boottabs;?>/>
 			</td>
 		</tr>
 		</table>

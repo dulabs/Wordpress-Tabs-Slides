@@ -1,7 +1,7 @@
-=== Wordpress Tabs Slides ===
+=== WP Tabs Slides ===
 Contributors: abdul_ibad
-Donate Link: http://ibad.bebasbelanja.com/wordpress-tabs-slides.html 
-Tags: tabs, slides, post
+Donate Link: http://wts.dulabs.com 
+Tags: tab,tabs,slides,post,responsive,bootstrap,collapse
 Requires at least: 2.7
 Tested up to: 3.0
 Stable tag: 2.0.0
@@ -12,6 +12,23 @@ Tabs and Slides (in post/page) Plugin gives you the ability to easily add conten
 
 Tabs and Slides (in post/page) Plugin gives you the ability to easily add content tabs and/or content slides. The tabs emulate a multi-page structure, while the slides emulate an accordion-like structure, inside a single page!
 
+= Support Easy Responsive Tabs as default tab engine =
+http://webthemez.com/demo/easy-responsive-tabs/Index.html
+
+= Support Bootstrap Tab =
+See installation.
+
+= Demo =
+http://satuproperti.com/wp-tabs-test
+
+= Github =
+https://github.com/dulabs/Wordpress-Tabs-Slides
+
+= Homepage =
+http://wts.dulabs.com
+
+Before update, please backup your style or wordpress.
+
 == Installation ==
 
 This section describes how to install the plugin and get it working.
@@ -20,8 +37,59 @@ This section describes how to install the plugin and get it working.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
 3. Test and enjoy!
 
-= Usage =
-Shortcode
+= Default Tab Shortcode =
+
+Insert shortcode to your post or page
+
+[tabs]
+	[tab title="Tab 1 Title"]
+		Tab Content 1
+	[/tab]
+	[tab title="Tab 2 Title"]
+		Tab Content 2
+	[/tab]
+[/tabs]
+
+Vertical Tab
+
+[tabs type="vertical"]
+	[tab title="Tab 1 Title"]
+		Tab Content 1
+	[/tab]
+	[tab title="Tab 2 Title"]
+		Tab Content 2
+	[/tab]
+[/tabs]
+
+= Bootstrap Tab Shortcode =
+
+[boottabs]
+	[boottab title="Tab 1 Title"]
+		Tab Content 1
+	[/boottab]
+	[boottab title="Tab 2 Title"]
+		Tab Content 2
+	[/boottab]
+[/boottabs]
+
+= Bootstrap Collapse = 
+
+Slider has deprecated, and replace with bootstrap collapse
+
+[collapse title="Our Collapse"]
+Collapse Content
+[/collapse]
+
+Another Example
+
+Trying bootstrap collapse [collapse target="towrapper"]plugin[/collapse] in paragraph.
+
+[collapse name="towrapper"]
+Wow, do you see me?
+[/collapse]
+
+
+= Deprecated < 2.0.1 =
 
 Tab:
 
@@ -68,6 +136,12 @@ Now, slideID is change to title of slides. don't use same name for slides.
 (Since version 1.8) Slides is available in accordion-like structure. You can call it with accordion tag.
 
 == Changelog ==
+
+= Version 2.0.3 =
+* Added: Easy Responsive Tab
+* Added: Bootstrap Tab
+* Change: Increase compability with wordpress shortcode
+* [updated Jan 13, 2016]
 
 = Version 2.0.1 = 
 * Added: Custom CSS Style

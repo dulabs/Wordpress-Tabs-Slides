@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: Wordpress Tabs Slides
+Plugin Name: WP Tabs Slides
 Plugin URI: http://wts.dulabs.com/
 Description: Wordpress Tabs Slides is plugin based on "<a href="http://www.joomlaworks.gr/">joomlaworks Tabs & Slides Mambots</a>" for Mambo/Joomla. Tabs and Slides (in content items) Plugin gives you the ability to easily add content tabs and/or content slides. The tabs emulate a multi-page structure, while the slides emulate an accordion-like structure, inside a single page!
 Version: 2.0.3
@@ -53,8 +53,19 @@ class tabs_slides{
 		add_filter('the_excerpt', array($this,"formatting"));
 		add_filter('widget_text', array($this,"formatting"));
 
-		add_shortcode('tabs',array($this,"boottabs_tag"));
-		add_shortcode('tab',array($this,"boottab_tag"));
+		// Tabs
+
+		add_shortcode('easytabs',array($this,"easytabs_tag"));
+		add_shortcode('easytab',array($this,"easytab_tag"));
+
+		add_shortcode('tabs',array($this,"easytabs_tag"));
+		add_shortcode('tab',array($this,"easytab_tag"));
+
+		add_shortcode('boottabs',array($this,"boottabs_tag"));
+		add_shortcode('boottab',array($this,"boottab_tag"));
+	
+
+		// Collapse
 		add_shortcode('collapse',array($this,"bootcollapse_tag"));
 	}
 	
@@ -64,7 +75,7 @@ class tabs_slides{
 		$options['frontdisable'] = "off";
 		$options['postdisable'] = "off";
 		$options['style'] = "default.css";
-		$options['template'] = "default";
+		$options['boottabs'] = "on";
 		add_option("wp_tabs_slides",$options);
 	}
 	
@@ -213,8 +224,9 @@ class tabs_slides{
 			return;
 		}
 	
-		$plugin_url = self::getSetting("PLUGIN_URL");
+				$plugin_url = self::getSetting("PLUGIN_URL");
 				$style = self::getOption("style");
+				$boottabs = self::getOption("boottabs");
 				$customstyle = trim(self::getOption('custom_style'));
 
 				$style = $plugin_url."/style/".strtolower($style);
@@ -225,12 +237,18 @@ class tabs_slides{
 				
 				$hacks = $plugin_url.'/hacks.css';
 				
+				if($boottabs == "on")
+				{
+					$bootstrap = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css";
+					wp_enqueue_style('bootstrap',$bootstrap,array(),WP_TABS_SLIDES_VERSION);
+				}
+
+				$easytabs = $plugin_url."/easytabs/css/easy-responsive-tabs.css";
+				wp_enqueue_style('easytabs',$easytabs,array(),WP_TABS_SLIDES_VERSION);
+	
 				wp_enqueue_style('tabs-slides',$style,array(),WP_TABS_SLIDES_VERSION);
 				wp_enqueue_style('tabs-slides-hacks',$hacks,array(),WP_TABS_SLIDES_VERSION);
 	
-				$bootstrap = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css";
-
-				wp_enqueue_style('bootstrap',$bootstrap,array(),WP_TABS_SLIDES_VERSION);
 	
 	}
 	
@@ -244,6 +262,7 @@ class tabs_slides{
 		
 		$plugin_url = self::getSetting("PLUGIN_URL");
 		$optimized = self::getOption("optimized");
+		$boottabs = self::getOption("boottabs");
 					
 		$tabs_slides = 	$plugin_url.'/ts/tabs_slides.js';
 		
@@ -259,9 +278,13 @@ class tabs_slides{
 		
 		wp_enqueue_script('tabs-slides-loader',$loader,array(),WP_TABS_SLIDES_VERSION);
 	
-		$bootstrap = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js";
-		wp_enqueue_script('bootstrap',$bootstrap,array(),WP_TABS_SLIDES_VERSION);
-	
+		if($boottabs == "on"){
+			$bootstrap = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js";
+			wp_enqueue_script('bootstrap',$bootstrap,array(),WP_TABS_SLIDES_VERSION);
+		}
+
+		$easytabs = $plugin_url."/easytabs/js/easyResponsiveTabs.js";
+		wp_enqueue_script('easytabs',$easytabs,array(),WP_TABS_SLIDES_VERSION);
 	}
 	
 	function disableThisPost(){
@@ -313,7 +336,7 @@ class tabs_slides{
 			$newoptions['postdisable'] = (isset($_POST['postdisable']))?$_POST['postdisable']:'off';
 			$newoptions['style'] = $_POST['style'];
 			$newoptions['custom_style'] = (isset($_POST['custom_style'])) ? $_POST['custom_style'] : "";
-			$newoptions['template'] = $_POST['template'];
+			$newoptions['boottabs'] = $_POST['boottabs'];
 
 			if($options != $newoptions){
 				update_option('wp_tabs_slides',$newoptions);
@@ -335,8 +358,7 @@ class tabs_slides{
 			$customstyle = self::getOption("custom_style");
 
 			$styles = self::getStyles();
-			$selectedTemplate = self::getOption("template");
-			$templates = array("default","bootstrap","foundation");
+			$boottabs = (self::getOption("boottabs") =="on") ? " checked=\"checked\" ":" ";
 
 			include_once(__DIR__.'/admin.php');
 	}
@@ -473,6 +495,78 @@ $title."</a></div></div><div class=\"wts_accordionwrapper".$pid." slideraccordio
 		
 	}
 
+	// With easy responsive tabs
+	public $easytabs;
+	public $currentEasyTabIndex;
+
+	function easytabs_tag($attr,$content)
+	{
+		$index = count($this->easytabs);
+		$this->currentEasyTabIndex = $index;
+		
+		do_shortcode($content);
+		$tabs = $this->easytabs;
+		
+		$id = $attr['id'];
+		$type = isset($attr['type']) ? $attr['type'] : 'default';
+
+		if(empty($id))
+		{
+			$id = "tab-".$index;
+		}
+
+		$markup  = '<div id="'.$id.'">          
+        			<ul class="resp-tabs-list '.$id.'">';
+		$markup .= implode("",$tabs[$index]['tab']);
+		$markup .= '</ul>';
+
+		$markup .= ' <div class="resp-tabs-container '.$id.'">';
+		$markup .= implode("",$tabs[$index]['pane']);
+		$markup .= '</div>';
+
+		$markup .= '</div>';
+
+		ob_start();
+		include(__DIR__.'/easytabs/script.php');
+		$script = ob_get_contents();
+		ob_end_clean();
+
+		$markup .= $script;
+
+		return $markup;
+	}
+
+	function easytab_tag($attr,$content)
+	{
+			if(!isset($attr['title'])) return $content;
+			
+			$temp_tabs = $this->easytabs;
+
+		 	$index = $this->currentEasyTabIndex;
+		 	
+			$tabs = $temp_tabs[$index];
+
+		    if (!isset($tabs['tab'])) {
+		        $tabs['tab'] = array();
+		    }
+
+
+		    $id = 'pane-' . $index . '-' .  count($tabs['tab']);
+
+			//self::$tabs[] = array('id' => $id,'content' => $content);
+			$active = isset($attr['active']) ? "active" : "";
+
+			$tabs['tab'][] = '<li role="presentation" class="'.$active.'">
+					'.$attr['title'].'
+				</li>';
+
+			$tabs['pane'][] = '<div role="tabpanel" class="tab-pane '.$active.'" id="'.$id.'">
+								  '.do_shortcode($content).'</div>';
+
+			$this->easytabs[$index] = $tabs;
+			
+	}
+
 
 	// With Bootstrap
 
@@ -480,6 +574,9 @@ $title."</a></div></div><div class=\"wts_accordionwrapper".$pid." slideraccordio
 	public $currentTabIndex;
 	function boottabs_tag($atts,$content)
 	{
+		$boottabs = self::getOption('boottabs');
+		if($boottabs != "on") return;
+
 		$index = count($this->tabs);
 		$this->currentTabIndex = $index;
 		
@@ -499,6 +596,10 @@ $title."</a></div></div><div class=\"wts_accordionwrapper".$pid." slideraccordio
 
 	function boottab_tag($attr,$content)
 	{
+			$boottabs = self::getOption('boottabs');
+
+			if($boottabs != "on") return;
+
 			if(!isset($attr['title'])) return;
 			
 			$temp_tabs = $this->tabs;
@@ -574,11 +675,11 @@ $title."</a></div></div><div class=\"wts_accordionwrapper".$pid." slideraccordio
 
 	function bootcollapse_create_wrapper($target,$content)
 	{
-		return '<div class="collapse" id="'.$target.'">'.$content.'</div>';
+		return '<div class="collapse" id="'.$target.'">'.
+				do_shortcode($content).
+				'</div>';
 	}
 
-
-	// With Foundation
 
 }
 
