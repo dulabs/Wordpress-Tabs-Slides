@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Wordpress Tabs Slides
-Plugin URI: http://ibad.bebasbelanja.com/wordpress-tabs-slides.html
+Plugin URI: http://wts.dulabs.com/
 Description: Wordpress Tabs Slides is plugin based on "<a href="http://www.joomlaworks.gr/">joomlaworks Tabs & Slides Mambots</a>" for Mambo/Joomla. Tabs and Slides (in content items) Plugin gives you the ability to easily add content tabs and/or content slides. The tabs emulate a multi-page structure, while the slides emulate an accordion-like structure, inside a single page!
 Version: 2.0.1
 Author: Abdul Ibad
@@ -29,6 +29,7 @@ Author URI: http://dulabs.com
 // NOFILTER = Don't filter (Not Recommend) 
 
 define('WP_TABS_SLIDES_VERSION','2.0.1');
+
 define('SHOW_TITLE_HTML','REPLACE');
 
 class tabs_slides{
@@ -47,9 +48,13 @@ class tabs_slides{
 		add_action('admin_menu', array($this,"admin_menu"));
 		/* Use the save_post action to do something with the data entered */
 		add_action('save_post', array($this,'savepost'));
+
 		add_filter('the_content', array($this,"formatting"));
 		add_filter('the_excerpt', array($this,"formatting"));
 		add_filter('widget_text', array($this,"formatting"));
+
+		add_shortcode('bootabs',array($this,"bootabs_tag"));
+		add_shortcode('bootab',array($this,"bootabs_child_tag"));
 	}
 	
 	function activation(){
@@ -58,6 +63,7 @@ class tabs_slides{
 		$options['frontdisable'] = "off";
 		$options['postdisable'] = "off";
 		$options['style'] = "default.css";
+		$options['template'] = "default";
 		add_option("wp_tabs_slides",$options);
 	}
 	
@@ -220,6 +226,11 @@ class tabs_slides{
 				
 				wp_enqueue_style('tabs-slides',$style,array(),WP_TABS_SLIDES_VERSION);
 				wp_enqueue_style('tabs-slides-hacks',$hacks,array(),WP_TABS_SLIDES_VERSION);
+	
+				$bootstrap = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css";
+
+				wp_enqueue_style('bootstrap',$bootstrap,array(),WP_TABS_SLIDES_VERSION);
+	
 	}
 	
 	function wp_head_scripts(){
@@ -246,6 +257,10 @@ class tabs_slides{
 		}
 		
 		wp_enqueue_script('tabs-slides-loader',$loader,array(),WP_TABS_SLIDES_VERSION);
+	
+		$bootstrap = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js";
+		wp_enqueue_script('bootstrap',$bootstrap,array(),WP_TABS_SLIDES_VERSION);
+	
 	}
 	
 	function disableThisPost(){
@@ -282,11 +297,92 @@ class tabs_slides{
 			
 			return false;
 	}
-	
-	
-	function formatting( $content ){
 		
-		global $post;
+
+	/* Admin */	
+	function optionsAction(){
+		
+		$options = $newoptions = get_option('wp_tabs_slides');
+		
+		if(isset($_POST['submit'])){
+						
+			$newoptions['sliderspeed'] = intval($_POST['speed']);
+			$newoptions['optimized'] = (isset($_POST['optimized']))?$_POST['optimized']:'off';
+			$newoptions['frontdisable'] = (isset($_POST['frontdisable']))?$_POST['frontdisable']:'off';
+			$newoptions['postdisable'] = (isset($_POST['postdisable']))?$_POST['postdisable']:'off';
+			$newoptions['style'] = $_POST['style'];
+			$newoptions['custom_style'] = (isset($_POST['custom_style'])) ? $_POST['custom_style'] : "";
+			$newoptions['template'] = $_POST['template'];
+
+			if($options != $newoptions){
+				update_option('wp_tabs_slides',$newoptions);
+				return '<div class="updated fade" id="message"><p><strong>'.__("Options Saved").'</strong></p></div>';
+			}
+		}
+		
+	}
+	
+	function optionsView(){
+		
+			$output = self::optionsAction();
+			
+			$sliderpeed = self::getOption("sliderspeed");
+			$optimized = (self::getOption("optimized") =="on") ? " checked=\"checked\" ":" ";
+			$frontdisable = (self::getOption("frontdisable") =="on") ? " checked=\"checked\" ":" ";
+			$postdisable = (self::getOption("postdisable") =="on") ? " checked=\"checked\" ":" ";
+			$defaultstyle = self::getOption("style");
+			$customstyle = self::getOption("custom_style");
+
+			$styles = self::getStyles();
+			$selectedTemplate = self::getOption("template");
+			$templates = array("default","bootstrap","foundation");
+
+			include_once(__DIR__.'/admin.php');
+	}
+	
+	function admin_menu(){
+		add_options_page('Wordpress Tabs Slides','Tabs Slides',10,'tabs-slides',array($this,"optionsView"));
+		
+		$postdisable = (self::getOption("postdisable")=="on") ? true : false;
+		
+		if($postdisable){
+			if( function_exists( 'add_meta_box' ) ) {
+	    		add_meta_box( 'wptabsslides_box', __( 'Wordpress Tabs Slides' ), array($this,"custom_box"), 'post', 'side','high' );
+				//add_meta_box( $id,                  $title,                                      $callback,                  $page, $context, $priority ); 
+	    		add_meta_box( 'wptabsslides_box', __( 'Wordpress Tabs Slides' ), array($this,"custom_box"), 'page', 'advanced' );
+	   		} else {
+	    		add_action('dbx_post_advanced', array($this,'old_custom_box') );
+	    		add_action('dbx_page_advanced', array($this,'old_custom_box') );
+	  		}
+	
+		}
+	
+	}
+
+	/* Formatting */
+	function formatting( $content )
+	{
+		$template = self::getOption('template');
+
+		switch($template)
+		{
+			case "bootstrap":
+				$content = $content;
+			break;
+			case "foundation":
+
+			break;
+			default:
+				$content = self::format_default($content);
+			break;
+		}
+
+		return $content;
+	}
+
+	function format_default( $content ){
+		
+	global $post;
 				
 	// if post empty (check from the title) then return false
 	if(empty($post->post_title)){
@@ -387,125 +483,62 @@ $title."</a></div></div><div class=\"wts_accordionwrapper".$pid." slideraccordio
 	return $content;
 		
 	}
-	
-	
-	
-	function optionsAction(){
+
+	public $tabs;
+	public $currentTabIndex;
+	function bootabs_tag($atts,$content)
+	{
+		$index = count($this->tabs);
+		$this->currentTabIndex = $index;
 		
-		$options = $newoptions = get_option('wp_tabs_slides');
+		do_shortcode($content);
+		$tabs = $this->tabs;
 		
-		if(isset($_POST['submit'])){
-						
-			$newoptions['sliderspeed'] = intval($_POST['speed']);
-			$newoptions['optimized'] = (isset($_POST['optimized']))?$_POST['optimized']:'off';
-			$newoptions['frontdisable'] = (isset($_POST['frontdisable']))?$_POST['frontdisable']:'off';
-			$newoptions['postdisable'] = (isset($_POST['postdisable']))?$_POST['postdisable']:'off';
-			$newoptions['style'] = $_POST['style'];
-			$newoptions['custom_style'] = (isset($_POST['custom_style'])) ? $_POST['custom_style'] : "";
+		$markup  = '<ul class="nav nav-tabs" role="tablist">';
+		$markup .= implode("",$tabs[$index]['tab']);
+		$markup .= '</ul>';
+
+		$markup .= ' <div class="tab-content">';
+		$markup .= implode("",$tabs[$index]['pane']);
+		$markup .= '</div>';
+
+		return $markup;
+	}
+
+	function bootabs_child_tag($attr,$content)
+	{
+			if(!isset($attr['title'])) return;
 			
-			if($options != $newoptions){
-				update_option('wp_tabs_slides',$newoptions);
-				echo '<div class="updated fade" id="message"><p><strong>'.__("Options Saved").'</strong></p></div>';
-			}
-		}
-		
-	}
-	
-	function optionsView(){
-		
-			self::optionsAction();
+			$temp_tabs = $this->tabs;
+
+		 	$index = $this->currentTabIndex;
+		 	
+			$tabs = $temp_tabs[$index];
+
+		    if (!isset($tabs['tab'])) {
+		        $tabs['tab'] = array();
+		    }
+
+
+		    $id = 'pane-' . $index . '-' .  count($tabs['tab']);
+
+			//self::$tabs[] = array('id' => $id,'content' => $content);
+			$active = isset($attr['active']) ? "active" : "";
+
+			$tabs['tab'][] = '<li role="presentation" class="'.$active.'">
+					<a href="#'.$id.'" aria-controls="'.$id.'" role="tab" data-toggle="tab">
+					'.$attr['title'].'
+					</a>
+				</li>';
+
+			$tabs['pane'][] = '<div role="tabpanel" class="tab-pane '.$active.'" id="'.$id.'">
+								  '.do_shortcode($content).'</div>';
+
+			$this->tabs[$index] = $tabs;
 			
-
-			$sliderpeed = self::getOption("sliderspeed");
-			$optimized = (self::getOption("optimized") =="on") ? " checked=\"checked\" ":" ";
-			$frontdisable = (self::getOption("frontdisable") =="on") ? " checked=\"checked\" ":" ";
-			$postdisable = (self::getOption("postdisable") =="on") ? " checked=\"checked\" ":" ";
-			$defaultstyle = self::getOption("style");
-			$customstyle = self::getOption("custom_style");
-
-			$styles = self::getStyles();
-		?>
-			<div class="wrap">
-			<h2>Wordpress Tabs Slides</h2>
-			<form action="" method="post">
-			<table class="widefat fixed">
-		<tr valign="top">
-		<th scope="row" width="150px"><?php _e("Slider Speed");?></th>
-		<td><input type="text" name="speed" value="<?php echo $sliderpeed;?>" /><br /><small><?php _e("miliseconds");?></small></td>
-		</tr>	
-		<tr>
-		<th scope="row"><?php _e("Use Optimized Loader");?></th>
-		<td><input type="checkbox" name="optimized" value="on"<?php echo $optimized;?>/><br /></td>
-		</tr>
-		<tr>
-		<th scope="row"><?php _e("Disable on Frontpage");?></th>
-		<td><input type="checkbox" name="frontdisable" value="on"<?php echo $frontdisable;?>/>
-			<small><?php _e("Disable script on frontpage");?></small></td>
-		</tr>
-		<tr>
-		<th scope="row"><?php _e("Disable on Posts/Pages");?></th>
-		<td><input type="checkbox" name="postdisable" value="on"<?php echo $postdisable;?>/>
-			<small><?php _e("Disable script on posts/pages");?></small></td>
-		</tr>
-		<tr>
-			<th scope="row"><?php _e("Style");?></th>
-			<td>
-				<select name="style">
-			<?php 
-			foreach($styles as $style):
-
-				if($style == $defaultstyle):
-				?>
-				<option value="<?php echo strtolower($style);?>" selected="selected"><?php echo $style;?></option>
-					<?php
-					else:
-					?>	
-				<option value="<?php echo strtolower($style);?>"><?php echo $style;?></option>
-				<?php
-				endif;
-			endforeach;
-			?>
-				</select>
-			</td>
-		</tr>
-		<tr>
-		<th scope="row"><?php _e("Custom Stylesheet File");?></th>
-		<td><input type="text" name="custom_style" value="<?php echo $customstyle;?>" style="width: 50%;" /></td>
-		</tr>
-		</table>
-		<p class="submit">
-		<input class="button-primary" type="submit" name="submit" value="<?php _e("Save Changes");?>" />
-		</p>
-		</form>
-		<hr />
-		<a href="http://ibad.bebasbelanja.com/wordpress-tabs-slides.html#usage" target="_blank"><?php _e("How to use");?></a>&nbsp;|&nbsp;
-		<a href="http://wordpress.org/extend/plugins/wordpress-tabs-slides/changelog/"><?php _e("Changelog");?></a>&nbsp;|&nbsp;
-		<a href="http://ibad.bebasbelanja.com/wordpress-tabs-slides.html" target="_blank"><?php _e("Plugin Home");?></a>&nbsp;|&nbsp;
-		<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=3ZM74BGUXB7EE&amp;lc=ID&amp;item_name=Wordpress%20Tabs%20Slides&amp;currency_code=USD&amp;bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted" title="Click to donate"><?php _e("Donate");?></a>
-		
-		</div>
-		<?php
 	}
-	
-	function admin_menu(){
-		add_options_page('Wordpress Tabs Slides','Tabs Slides',10,'tabs-slides',array($this,"optionsView"));
-		
-		$postdisable = (self::getOption("postdisable")=="on") ? true : false;
-		
-		if($postdisable){
-			if( function_exists( 'add_meta_box' ) ) {
-	    		add_meta_box( 'wptabsslides_box', __( 'Wordpress Tabs Slides' ), array($this,"custom_box"), 'post', 'side','high' );
-				//add_meta_box( $id,                  $title,                                      $callback,                  $page, $context, $priority ); 
-	    		add_meta_box( 'wptabsslides_box', __( 'Wordpress Tabs Slides' ), array($this,"custom_box"), 'page', 'advanced' );
-	   		} else {
-	    		add_action('dbx_post_advanced', array($this,'old_custom_box') );
-	    		add_action('dbx_page_advanced', array($this,'old_custom_box') );
-	  		}
-	
-		}
-	
-	}
-	
+
+
 }
 
 add_action('init',array(new tabs_slides,"init"));
