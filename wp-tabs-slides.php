@@ -3,7 +3,7 @@
 Plugin Name: Wordpress Tabs Slides
 Plugin URI: http://wts.dulabs.com/
 Description: Wordpress Tabs Slides is plugin based on "<a href="http://www.joomlaworks.gr/">joomlaworks Tabs & Slides Mambots</a>" for Mambo/Joomla. Tabs and Slides (in content items) Plugin gives you the ability to easily add content tabs and/or content slides. The tabs emulate a multi-page structure, while the slides emulate an accordion-like structure, inside a single page!
-Version: 2.0.1
+Version: 2.0.3
 Author: Abdul Ibad
 Author URI: http://dulabs.com
 
@@ -28,7 +28,7 @@ Author URI: http://dulabs.com
 // STRIP = Strip html tags
 // NOFILTER = Don't filter (Not Recommend) 
 
-define('WP_TABS_SLIDES_VERSION','2.0.1');
+define('WP_TABS_SLIDES_VERSION','2.0.3');
 
 define('SHOW_TITLE_HTML','REPLACE');
 
@@ -53,8 +53,9 @@ class tabs_slides{
 		add_filter('the_excerpt', array($this,"formatting"));
 		add_filter('widget_text', array($this,"formatting"));
 
-		add_shortcode('bootabs',array($this,"bootabs_tag"));
-		add_shortcode('bootab',array($this,"bootabs_child_tag"));
+		add_shortcode('tabs',array($this,"boottabs_tag"));
+		add_shortcode('tab',array($this,"boottab_tag"));
+		add_shortcode('collapse',array($this,"bootcollapse_tag"));
 	}
 	
 	function activation(){
@@ -362,20 +363,8 @@ class tabs_slides{
 	/* Formatting */
 	function formatting( $content )
 	{
-		$template = self::getOption('template');
 
-		switch($template)
-		{
-			case "bootstrap":
-				$content = $content;
-			break;
-			case "foundation":
-
-			break;
-			default:
-				$content = self::format_default($content);
-			break;
-		}
+		$content = self::format_default($content);
 
 		return $content;
 	}
@@ -484,9 +473,12 @@ $title."</a></div></div><div class=\"wts_accordionwrapper".$pid." slideraccordio
 		
 	}
 
+
+	// With Bootstrap
+
 	public $tabs;
 	public $currentTabIndex;
-	function bootabs_tag($atts,$content)
+	function boottabs_tag($atts,$content)
 	{
 		$index = count($this->tabs);
 		$this->currentTabIndex = $index;
@@ -505,7 +497,7 @@ $title."</a></div></div><div class=\"wts_accordionwrapper".$pid." slideraccordio
 		return $markup;
 	}
 
-	function bootabs_child_tag($attr,$content)
+	function boottab_tag($attr,$content)
 	{
 			if(!isset($attr['title'])) return;
 			
@@ -538,6 +530,55 @@ $title."</a></div></div><div class=\"wts_accordionwrapper".$pid." slideraccordio
 			
 	}
 
+	public $collapse;
+	function bootcollapse_tag($attr,$content)
+	{
+
+		if(isset($attr['target']))
+		{
+			$target = $attr['target'];
+
+			$markup = self::bootcollapse_create_link($target,$content);
+
+			return $markup;
+		}
+
+		if(isset($attr['name']))
+		{
+			$name = $attr['name'];
+			$markup = self::bootcollapse_create_wrapper($name,$content);
+			return $markup;
+		}
+
+		if(isset($attr['title']))
+		{
+			$id = count($this->collapse);
+			$target = "collapse-".$id;
+			$title = $attr['title'];
+			$markup  = self::bootcollapse_create_link($target,$title);
+			$markup .= self::bootcollapse_create_wrapper($target,$content);
+			
+			$this->collapse[] = $target;
+
+			return $markup;
+		}
+	}
+
+	function bootcollapse_create_link($target,$content)
+	{
+		return '<a role="button" data-toggle="collapse" href="#'.$target.'" aria-expanded="false" aria-controls="'.$target.'">
+  						'.$content.'
+						</a>
+				   	  ';
+	}
+
+	function bootcollapse_create_wrapper($target,$content)
+	{
+		return '<div class="collapse" id="'.$target.'">'.$content.'</div>';
+	}
+
+
+	// With Foundation
 
 }
 
